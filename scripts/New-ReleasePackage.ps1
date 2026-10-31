@@ -8,10 +8,9 @@ $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'Use-ProjectTools.ps1') -UseSystemDotnet:$UseSystemDotnet
 $dotnetExe = (Get-Command dotnet -ErrorAction Stop).Source
 $project = Join-Path $projectRoot 'dev\PCL-CE\Plain Craft Launcher 2'
-$metadata = Get-Content -LiteralPath (Join-Path $project 'metadata.json') -Raw -Encoding UTF8 | ConvertFrom-Json
-$version = $metadata.version.base + '-' + $metadata.version.suffix
-if ($version -notmatch '^\d+\.\d+\.\d+-[a-zA-Z0-9.-]+$') { throw '预览版本号无效。' }
-if ($ExpectedTag -and $ExpectedTag -cne "v$version") { throw '标签与源码版本不一致。' }
+$releaseVersion = & (Join-Path $PSScriptRoot 'Get-ReleaseVersion.ps1') -ProjectDirectory $project -ExpectedTag $ExpectedTag
+$version = $releaseVersion.Version
+$releaseKind = if ($releaseVersion.IsPrerelease) { '预览版' } else { '稳定版' }
 $sourceCommit = (& git -C $projectRoot rev-parse HEAD | Out-String).Trim()
 if ($LASTEXITCODE -ne 0) { throw '无法读取源码提交。' }
 $embeddedClientId = ([string]$env:PCL_MS_CLIENT_ID).Trim()
@@ -160,6 +159,7 @@ $serviceDescription = if ($EmbedServiceCredentials) {
 }
 [ordered]@{
     version = $version
+    isPrerelease = $releaseVersion.IsPrerelease
     sourceCommit = $sourceCommit
     runtime = 'win-x64'
     selfContained = $true
@@ -170,14 +170,14 @@ $serviceDescription = if ($EmbedServiceCredentials) {
 @"
 # 猪咪启动器 $version
 
-Windows x64 预览版，解压后运行 PigLauncher.exe。
+Windows x64 $releaseKind，解压后运行 PigLauncher.exe。
 已包含 .NET 运行时；Minecraft 使用的 Java 需单独准备或由启动器下载。
 
 $serviceDescription
 Modrinth、实例管理和游戏启动仍可按各自条件使用。
 
 基于 PCL CE v2.15.1（1a7653127d578efdb2a9388999a3fdc67d9e49d5）。
-许可、来源和组件声明见 licenses/。这是预览版本，完整功能验收尚未完成。
+许可、来源和组件声明见 licenses/；具体功能验收记录见项目文档。
 "@ | Set-Content -LiteralPath (Join-Path $packageRoot 'README.md') -Encoding UTF8
 
 $zipPath = Join-Path $releaseRoot "$packageName.zip"

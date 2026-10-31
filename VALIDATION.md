@@ -16,6 +16,13 @@
 
 最新发布证据见下方 Actions 运行记录；最近功能检查证据为 `.local/functional-tests/20261031-modpack-failures-final/evidence/`。此前设置、下载源、CF、WebP 证据位于同级对应运行目录。检查项数不代表完整用户流程验收。
 
+## 2026-11-01：版本规则与稳定版支持
+
+- 版本规则见 [VERSIONING.md](VERSIONING.md)：支持 `x.y.z` 与 `x.y.z-preview.N`，检查基础版本、预览序号、Git 标签及主程序 `Version` / `AssemblyVersion` / `FileVersion` 的一致性。
+- 稳定版与预览版分别使用 GitHub `prerelease=false` / `true`；两者均保持草稿，打包说明和 `build-info.json` 同步版本类型。
+- 26 项版本输入检查、5 项工作流模拟检查及 PowerShell 语法检查通过，覆盖两类版本的创建/更新和已发布 Release 保护。证据脚本为 `.local/Test-StableRelease.ps1`，模拟检查未操作远端 Release。
+- 当前版本仍为 `0.1.0-preview.1`，已有标签与附件保留；新规则随后续版本标签使用。
+
 ## 2026-11-01：GitHub Actions 凭证构建
 
 - 新增 `Build release` 工作流：推送版本标签或手动选择标签，在 Windows runner 使用固定 SDK 构建、保存产物并替换对应草稿的 ZIP 与 SHA-256；替换后核对服务端校验值，保持草稿状态。

@@ -6,6 +6,8 @@
 
 推送 `v*` 标签或手动运行 `Build release` 工作流，会从对应标签编译 Windows x64 自带 .NET 运行时的 ZIP 与 SHA-256，校验后替换草稿附件。构建通过仓库 Secrets `CURSEFORGE_API_KEY`、`MS_CLIENT_ID` 内嵌服务配置；包内 `build-info.json` 记录源码提交和工作流地址。
 
+版本按 `主版本.次版本.修订号[-preview.N]` 手动维护，支持稳定版与预览版；GitHub 预发布标记随版本类型设置，两者均保持草稿。设置步骤见 [版本规则](VERSIONING.md)。
+
 本地运行 `scripts/New-ReleasePackage.ps1` 默认仍不嵌入 CF Key，输出位于忽略提交的 `.local/releases/`；显式凭证构建使用 `-EmbedServiceCredentials` 及对应 `PCL_` 环境变量。源码和工作流仅保存 Secret 名称，账号数据不参与打包。
 
 当前开发版位于 `dev/PCL-CE/`，名称为“猪咪启动器（PigLauncher）”，作者/维护者为 `xcy1221`。已形成可运行的个人开发版，完成品牌外观、默认官方源与可选镜像、CE 更新隔离和少量功能调整。用户已报告下载、启动及创建世界成功；完整正版登录、CF 资源和其余安装流程仍待验收，见 [验证记录](VALIDATION.md)。原始审查副本保持不变。

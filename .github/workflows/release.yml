@@ -63,6 +63,7 @@ jobs:
           PACKAGE_ZIP: ${{ steps.package.outputs.zip_path }}
           PACKAGE_CHECKSUM: ${{ steps.package.outputs.checksum_path }}
           PACKAGE_VERSION: ${{ steps.package.outputs.version }}
+          PACKAGE_PRERELEASE: ${{ contains(steps.package.outputs.version, '-') }}
         run: |
           $ErrorActionPreference = 'Stop'
           $draft = gh release view $env:RELEASE_TAG --json isDraft --jq '.isDraft' 2>$null
@@ -77,15 +78,16 @@ jobs:
           $bodyFile = Join-Path $env:RUNNER_TEMP 'release-notes.md'
           [IO.File]::WriteAllText($bodyFile, $notes, [Text.UTF8Encoding]::new($false))
           if ($releaseExists) {
-            gh release edit $env:RELEASE_TAG --draft --prerelease --title "猪咪启动器 $env:PACKAGE_VERSION" --notes-file $bodyFile
+            gh release edit $env:RELEASE_TAG --draft "--prerelease=$env:PACKAGE_PRERELEASE" --title "猪咪启动器 $env:PACKAGE_VERSION" --notes-file $bodyFile
           } else {
-            gh release create $env:RELEASE_TAG --draft --prerelease --verify-tag --title "猪咪启动器 $env:PACKAGE_VERSION" --notes-file $bodyFile
+            gh release create $env:RELEASE_TAG --draft "--prerelease=$env:PACKAGE_PRERELEASE" --verify-tag --title "猪咪启动器 $env:PACKAGE_VERSION" --notes-file $bodyFile
           }
           if ($LASTEXITCODE -ne 0) { throw 'Failed to prepare draft release.' }
           gh release upload $env:RELEASE_TAG $env:PACKAGE_ZIP $env:PACKAGE_CHECKSUM --clobber
           if ($LASTEXITCODE -ne 0) { throw 'Failed to upload release attachments.' }
-          $release = gh release view $env:RELEASE_TAG --json isDraft,assets | ConvertFrom-Json
-          if ($LASTEXITCODE -ne 0 -or !$release.isDraft) { throw 'Draft release verification failed.' }
+          $release = gh release view $env:RELEASE_TAG --json isDraft,isPrerelease,assets | ConvertFrom-Json
+          $expectedPrerelease = $env:PACKAGE_PRERELEASE -eq 'true'
+          if ($LASTEXITCODE -ne 0 -or !$release.isDraft -or $release.isPrerelease -ne $expectedPrerelease) { throw 'Draft release verification failed.' }
           foreach ($file in @($env:PACKAGE_ZIP, $env:PACKAGE_CHECKSUM)) {
             $asset = @($release.assets | Where-Object name -eq ([IO.Path]::GetFileName($file)))
             $expected = 'sha256:' + (Get-FileHash -LiteralPath $file -Algorithm SHA256).Hash.ToLowerInvariant()
