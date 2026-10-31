@@ -1,0 +1,7 @@
+.local/
+**/service-config.json
+dev/PigLauncher/
+**/bin/
+**/obj/
+# Independent upstream review checkout; source import is planned for phase 3.
+upstream/PCL-CE/

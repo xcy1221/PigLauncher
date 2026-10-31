@@ -1,0 +1,50 @@
+<local:MyPageRight x:Class="PCL.PageSetupPig"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="clr-namespace:PCL" PanScroll="{Binding ElementName=PanBack}">
+    <local:MyScrollViewer x:Name="PanBack" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="25,10">
+            <local:MyCard Title="猪咪预览" Margin="0,15,0,15">
+                <StackPanel Margin="20,38,20,18">
+                    <local:PigMascot x:Name="PreviewPig" IsPreview="True" Height="210" />
+                    <TextBlock Text="一只在主页慢慢转圈的方块猪。调整后立即生效并自动保存。"
+                               TextAlignment="Center" TextWrapping="Wrap" Opacity="0.65" Margin="0,4,0,0" />
+                </StackPanel>
+            </local:MyCard>
+            <local:MyCard Title="旋转的猪" Margin="0,0,0,15">
+                <StackPanel Margin="22,40,22,18">
+                    <local:MyCheckBox x:Name="CheckShow" Text="在空白主页显示猪咪" Height="26" Change="CheckChanged" />
+                    <local:MyCheckBox x:Name="CheckRotate" Text="自动水平旋转" Height="26" Margin="0,4,0,0" Change="CheckChanged" />
+                    <local:MyCheckBox x:Name="CheckReverse" Text="反向旋转" Height="26" Margin="0,4,0,12" Change="CheckChanged" />
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="80" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="72" />
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="38" />
+                            <RowDefinition Height="38" />
+                            <RowDefinition Height="38" />
+                            <RowDefinition Height="38" />
+                        </Grid.RowDefinitions>
+                        <TextBlock Text="旋转速度" VerticalAlignment="Center" />
+                        <local:MySlider x:Name="SliderSpeed" Grid.Column="1" MaxValue="120" Margin="8,0,12,0" VerticalAlignment="Center" Change="SliderChanged" />
+                        <TextBlock x:Name="LabSpeed" Grid.Column="2" VerticalAlignment="Center" TextAlignment="Right" />
+                        <TextBlock Text="猪咪大小" Grid.Row="1" VerticalAlignment="Center" />
+                        <local:MySlider x:Name="SliderSize" Grid.Row="1" Grid.Column="1" MaxValue="80" Margin="8,0,12,0" VerticalAlignment="Center" Change="SliderChanged" />
+                        <TextBlock x:Name="LabSize" Grid.Row="1" Grid.Column="2" VerticalAlignment="Center" TextAlignment="Right" />
+                        <TextBlock Text="俯视角度" Grid.Row="2" VerticalAlignment="Center" />
+                        <local:MySlider x:Name="SliderTilt" Grid.Row="2" Grid.Column="1" MaxValue="35" Margin="8,0,12,0" VerticalAlignment="Center" Change="SliderChanged" />
+                        <TextBlock x:Name="LabTilt" Grid.Row="2" Grid.Column="2" VerticalAlignment="Center" TextAlignment="Right" />
+                        <TextBlock Text="猪咪外观" Grid.Row="3" VerticalAlignment="Center" />
+                        <TextBlock Text="原版成年粉猪" Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="2" Margin="8,0,0,0" VerticalAlignment="Center" />
+                    </Grid>
+                    <TextBlock Text="速度为 0 时暂停。使用自定义主页时，猪咪会自动让出位置。"
+                               TextWrapping="Wrap" Opacity="0.65" Margin="0,12,0,14" />
+                    <local:MyButton Text="恢复猪咪默认设置" Width="170" Height="34" HorizontalAlignment="Left" Click="ResetPig" />
+                </StackPanel>
+            </local:MyCard>
+        </StackPanel>
+    </local:MyScrollViewer>
+</local:MyPageRight>
