@@ -1,11 +1,31 @@
 #requires -Version 5.1
-param()
+param(
+    [switch]$UseSystemDotnet,
+    [switch]$EmbedServiceCredentials,
+    [string]$ExpectedTag = ''
+)
 $ErrorActionPreference = 'Stop'
-. (Join-Path $PSScriptRoot 'Use-ProjectTools.ps1')
+. (Join-Path $PSScriptRoot 'Use-ProjectTools.ps1') -UseSystemDotnet:$UseSystemDotnet
+$dotnetExe = (Get-Command dotnet -ErrorAction Stop).Source
 $project = Join-Path $projectRoot 'dev\PCL-CE\Plain Craft Launcher 2'
 $metadata = Get-Content -LiteralPath (Join-Path $project 'metadata.json') -Raw -Encoding UTF8 | ConvertFrom-Json
 $version = $metadata.version.base + '-' + $metadata.version.suffix
 if ($version -notmatch '^\d+\.\d+\.\d+-[a-zA-Z0-9.-]+$') { throw '预览版本号无效。' }
+if ($ExpectedTag -and $ExpectedTag -cne "v$version") { throw '标签与源码版本不一致。' }
+$sourceCommit = (& git -C $projectRoot rev-parse HEAD | Out-String).Trim()
+if ($LASTEXITCODE -ne 0) { throw '无法读取源码提交。' }
+$embeddedClientId = ([string]$env:PCL_MS_CLIENT_ID).Trim()
+$embeddedCfKey = ([string]$env:PCL_CURSEFORGE_API_KEY).Trim()
+if ($EmbedServiceCredentials) {
+    $parsedClientId = [Guid]::Empty
+    if ([string]::IsNullOrWhiteSpace($embeddedClientId) -or
+        ![Guid]::TryParse($embeddedClientId, [ref]$parsedClientId) -or $parsedClientId -eq [Guid]::Empty) {
+        throw '缺少有效的 MS_CLIENT_ID Secret。'
+    }
+    if ([string]::IsNullOrWhiteSpace($embeddedCfKey) -or $embeddedCfKey -notmatch '^[\x21-\x7E]+$') {
+        throw '缺少有效的 CURSEFORGE_API_KEY Secret。'
+    }
+}
 $releaseRoot = Join-Path $localRoot "releases\v$version-win-x64\$(Get-Date -Format 'yyyyMMdd-HHmmss')"
 if (Test-Path -LiteralPath $releaseRoot) { throw "输出目录已存在：$releaseRoot" }
 $publishRoot = Join-Path $releaseRoot 'publish'
@@ -14,22 +34,45 @@ $packageRoot = Join-Path $releaseRoot $packageName
 New-Item -ItemType Directory -Path $packageRoot -Force | Out-Null
 $logPath = Join-Path $releaseRoot 'publish.log'
 
-# 独立中间产物，禁止 Source Generator 将当前终端凭证编译进发布包。
+# 独立中间产物；凭证构建只允许指定的两个服务标识和源码提交。
 $oldTestRoot = $env:PIGLAUNCHER_TEST_ROOT
-$oldWriteSecret = $env:PCL_WRITE_SECRET
+$oldPclEnvironment = @{}
+Get-ChildItem Env:PCL_* | ForEach-Object { $oldPclEnvironment[$_.Name] = $_.Value }
 try {
     $env:PIGLAUNCHER_TEST_ROOT = $releaseRoot
-    $env:PCL_WRITE_SECRET = $null
-    & (Join-Path $env:DOTNET_ROOT 'dotnet.exe') publish (Join-Path $project 'Plain Craft Launcher 2.csproj') `
+    foreach ($name in $oldPclEnvironment.Keys) { [Environment]::SetEnvironmentVariable($name, $null, 'Process') }
+    if ($EmbedServiceCredentials) {
+        $env:PCL_WRITE_SECRET = '1'
+        $env:PCL_MS_CLIENT_ID = $embeddedClientId
+        $env:PCL_CURSEFORGE_API_KEY = $embeddedCfKey
+        $env:PCL_GITHUB_SHA = $sourceCommit
+    }
+    & $dotnetExe publish (Join-Path $project 'Plain Craft Launcher 2.csproj') `
         -c Release -r win-x64 --self-contained true '-p:Platform=x64' `
         '-p:PublishSingleFile=true' '-p:IncludeNativeLibrariesForSelfExtract=true' `
+        '-p:UseSharedCompilation=false' `
         '-p:NuGetAudit=false' '-p:RestoreIgnoreFailedSources=true' `
         -o $publishRoot --verbosity minimal *> $logPath
-    if ($LASTEXITCODE -ne 0) { throw "发布构建失败，见 $logPath" }
+    if ($LASTEXITCODE -ne 0) {
+        Get-Content -LiteralPath $logPath -Tail 60
+        throw "发布构建失败，见 $logPath"
+    }
 }
 finally {
     $env:PIGLAUNCHER_TEST_ROOT = $oldTestRoot
-    $env:PCL_WRITE_SECRET = $oldWriteSecret
+    Get-ChildItem Env:PCL_* | ForEach-Object { [Environment]::SetEnvironmentVariable($_.Name, $null, 'Process') }
+    foreach ($name in $oldPclEnvironment.Keys) { [Environment]::SetEnvironmentVariable($name, $oldPclEnvironment[$name], 'Process') }
+}
+
+if ($EmbedServiceCredentials) {
+    $corePath = Join-Path $project 'bin\Release\net10.0-windows\win-x64\PCL.Core.dll'
+    $coreHex = [BitConverter]::ToString([IO.File]::ReadAllBytes($corePath))
+    foreach ($value in @($embeddedCfKey, $embeddedClientId, $sourceCommit)) {
+        if (!$coreHex.Contains([BitConverter]::ToString([Text.Encoding]::Unicode.GetBytes($value)))) {
+            throw '编译结果缺少要求内嵌的服务配置或源码提交。'
+        }
+    }
+    Write-Output 'Embedded service configuration verified.'
 }
 
 Get-ChildItem -LiteralPath $publishRoot -Force | Where-Object Extension -ne '.pdb' |
@@ -100,9 +143,9 @@ foreach ($jar in Get-ChildItem -LiteralPath (Join-Path $project 'Resources') -Fi
     finally { $archive.Dispose() }
 }
 
-# Client ID 是公开应用标识；只复制该字段，不复制本地 CF Key 或账号数据。
+# 非凭证构建只复制公开的 Client ID；凭证构建由程序内置配置提供默认值。
 $servicesPath = Join-Path $localRoot 'service-config.json'
-if (Test-Path -LiteralPath $servicesPath) {
+if (!$EmbedServiceCredentials -and (Test-Path -LiteralPath $servicesPath)) {
     $services = Get-Content -LiteralPath $servicesPath -Raw -Encoding UTF8 | ConvertFrom-Json
     $clientId = [Guid]::Parse([string]$services.MS_CLIENT_ID)
     if ($clientId -eq [Guid]::Empty) { throw '微软应用标识为空。' }
@@ -110,14 +153,27 @@ if (Test-Path -LiteralPath $servicesPath) {
         Set-Content -LiteralPath (Join-Path $packageRoot 'service-config.json') -Encoding UTF8
 }
 
+$serviceDescription = if ($EmbedServiceCredentials) {
+    '本包已通过 GitHub Secrets 内嵌项目的微软应用标识与 CurseForge Key，可直接使用对应服务。本地 service-config.json 仍可覆盖内置配置。'
+} else {
+    '本包不附带 CurseForge Key。个人测试可在程序同目录放入自己的 service-config.json；缺少 Key 时 CF 功能不可用。'
+}
+[ordered]@{
+    version = $version
+    sourceCommit = $sourceCommit
+    runtime = 'win-x64'
+    selfContained = $true
+    serviceCredentialsEmbedded = [bool]$EmbedServiceCredentials
+    workflowRun = if ($env:GITHUB_ACTIONS -eq 'true') { "$env:GITHUB_SERVER_URL/$env:GITHUB_REPOSITORY/actions/runs/$env:GITHUB_RUN_ID" } else { $null }
+} | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $packageRoot 'build-info.json') -Encoding UTF8
+
 @"
 # 猪咪启动器 $version
 
 Windows x64 预览版，解压后运行 PigLauncher.exe。
 已包含 .NET 运行时；Minecraft 使用的 Java 需单独准备或由启动器下载。
 
-此草稿不附带 CurseForge Key，CF 搜索及下载需要有效的本地配置。
-个人测试可将自己的 service-config.json 放到程序同目录；它不包含在源码仓库中。
+$serviceDescription
 Modrinth、实例管理和游戏启动仍可按各自条件使用。
 
 基于 PCL CE v2.15.1（1a7653127d578efdb2a9388999a3fdc67d9e49d5）。
@@ -130,3 +186,7 @@ $hash = (Get-FileHash -LiteralPath $zipPath -Algorithm SHA256).Hash.ToLowerInvar
 "$hash  $packageName.zip" | Set-Content -LiteralPath (Join-Path $releaseRoot 'SHA256SUMS.txt') -Encoding ASCII
 Write-Output "Package: $zipPath"
 Write-Output "SHA256: $hash"
+if ($env:GITHUB_ACTIONS -eq 'true' -and $env:GITHUB_OUTPUT) {
+    $outputs = "zip_path=$zipPath`nchecksum_path=$(Join-Path $releaseRoot 'SHA256SUMS.txt')`nversion=$version`n"
+    [IO.File]::AppendAllText($env:GITHUB_OUTPUT, $outputs, [Text.UTF8Encoding]::new($false))
+}

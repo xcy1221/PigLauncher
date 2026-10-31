@@ -1,0 +1,96 @@
+name: Build release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Version tag to build
+        required: true
+        default: v0.1.0-preview.1
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: windows-2025
+    timeout-minutes: 30
+    env:
+      RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - name: Checkout version tag
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.RELEASE_TAG }}
+          persist-credentials: false
+
+      - name: Install pinned .NET SDK
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          global-json-file: global.json
+
+      - name: Build and verify package
+        id: package
+        env:
+          PCL_MS_CLIENT_ID: ${{ secrets.MS_CLIENT_ID }}
+          PCL_CURSEFORGE_API_KEY: ${{ secrets.CURSEFORGE_API_KEY }}
+        run: ./scripts/New-ReleasePackage.ps1 -UseSystemDotnet -EmbedServiceCredentials -ExpectedTag $env:RELEASE_TAG
+
+      - name: Save build artifacts
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: PigLauncher-${{ env.RELEASE_TAG }}-win-x64
+          path: |
+            ${{ steps.package.outputs.zip_path }}
+            ${{ steps.package.outputs.checksum_path }}
+          if-no-files-found: error
+          retention-days: 3
+
+      - name: Replace draft release attachments
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PACKAGE_ZIP: ${{ steps.package.outputs.zip_path }}
+          PACKAGE_CHECKSUM: ${{ steps.package.outputs.checksum_path }}
+          PACKAGE_VERSION: ${{ steps.package.outputs.version }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $draft = gh release view $env:RELEASE_TAG --json isDraft --jq '.isDraft' 2>$null
+          $releaseExists = $LASTEXITCODE -eq 0
+          if ($releaseExists -and $draft.Trim() -ne 'true') { throw 'Only draft releases may be replaced.' }
+          $notesPath = "releases/$env:PACKAGE_VERSION.md"
+          if (!(Test-Path -LiteralPath $notesPath)) { throw 'Missing version release notes.' }
+          $notes = Get-Content -LiteralPath $notesPath -Raw
+          $runUrl = "$env:GITHUB_SERVER_URL/$env:GITHUB_REPOSITORY/actions/runs/$env:GITHUB_RUN_ID"
+          $commit = (git rev-parse HEAD).Trim()
+          $notes += "`n`n自动构建：$runUrl`n源码提交：$commit`n"
+          $bodyFile = Join-Path $env:RUNNER_TEMP 'release-notes.md'
+          [IO.File]::WriteAllText($bodyFile, $notes, [Text.UTF8Encoding]::new($false))
+          if ($releaseExists) {
+            gh release edit $env:RELEASE_TAG --draft --prerelease --title "猪咪启动器 $env:PACKAGE_VERSION" --notes-file $bodyFile
+          } else {
+            gh release create $env:RELEASE_TAG --draft --prerelease --verify-tag --title "猪咪启动器 $env:PACKAGE_VERSION" --notes-file $bodyFile
+          }
+          if ($LASTEXITCODE -ne 0) { throw 'Failed to prepare draft release.' }
+          gh release upload $env:RELEASE_TAG $env:PACKAGE_ZIP $env:PACKAGE_CHECKSUM --clobber
+          if ($LASTEXITCODE -ne 0) { throw 'Failed to upload release attachments.' }
+          $release = gh release view $env:RELEASE_TAG --json isDraft,assets | ConvertFrom-Json
+          if ($LASTEXITCODE -ne 0 -or !$release.isDraft) { throw 'Draft release verification failed.' }
+          foreach ($file in @($env:PACKAGE_ZIP, $env:PACKAGE_CHECKSUM)) {
+            $asset = @($release.assets | Where-Object name -eq ([IO.Path]::GetFileName($file)))
+            $expected = 'sha256:' + (Get-FileHash -LiteralPath $file -Algorithm SHA256).Hash.ToLowerInvariant()
+            if ($asset.Count -ne 1 -or $asset[0].state -ne 'uploaded' -or $asset[0].digest -ne $expected) {
+              throw 'Uploaded attachment checksum verification failed.'
+            }
+          }
+          Write-Output 'Draft release attachments verified.'
