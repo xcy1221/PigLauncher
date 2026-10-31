@@ -1,6 +1,6 @@
 # 猪咪启动器许可核查
 
-2026-10-31；范围：计划公开源码仓库，通过公开 GitHub Releases 提供应用二进制，不进行任何形式的宣传；预计最初 4–5 人免费使用，不限制其他人获取。依据仓库、审批邮件和协议文本作判断，未取得额外授权。
+状态更新：2026-11-01；条款核查：2026-10-31。当前以本人自用为核心，仓库私有、Release 为草稿；此前公开源码与 Releases、不宣传、初期 4–5 人使用的计划已向 CF 补充说明，尚待确认。未取得额外 PCL 授权。
 
 当前取舍：核心目标为本人持续自用，朋友试用为附加需求。用户决定接受现有授权不确定性，暂缓许可处理，不将其作为开发阻塞；核查结论保留。GitHub Release 先在私有仓库制作草稿。
 
@@ -61,14 +61,14 @@
 
 ## 其他交付问题
 
-- 当前 `dev/PigLauncher/` 内未找到独立的 LICENSE / LICENCE / NOTICE 文件。源码目录有许可，不代表交付包已经携带；后续需补齐实际依赖声明，现有 `PCL.Core/NOTICE` 只列少数组件。
+- 旧 `dev/PigLauncher/` 开发副本未附独立许可文件；当前 Release ZIP 已在 `licenses/` 收录 PCL 条款、Apache、NOTICE、图标及素材来源、实际解析的 NuGet / 运行时包声明和随包许可。
 - 主页使用直接提取的 Minecraft 猪纹理和模型资料，见 `Images/Pig/SOURCE.md`；图标也以 Minecraft 猪为原型。来源署名不等于再分发授权，这些素材不能随代码宣称为 Apache。分享前需单独确认，优先考虑原创素材或不随包携带原版资源。[Minecraft EULA](https://www.minecraft.net/en-us/eula)、[素材与品牌指南](https://www.minecraft.net/en-us/usage-guidelines)
 - CurseForge：单用户是申请时的预期，批准邮件未设置人数上限；不能直接称为“仅许可一人”。已补充范围并询问沿用现有 Key，待答复，具体见下节。
 - Modrinth 要求可识别的 User-Agent；部分请求仍标为 PCL CE，后续宜改为猪咪真实身份。API 使用许可不替代各模组许可。[API 文档](https://docs.modrinth.com/api/)、[服务条款](https://modrinth.com/legal/terms)
 
 ## CF 优先事项
 
-已重新读取 2026-10-29 的原审批邮件：正文批准 PigLauncher 使用第三方 API 并发放 Key，没有单用户硬性上限、公开源码禁令或桌面构建交付说明。因此，不应推断增加几位朋友就自动失效或必须重新申请。通用条款第 4 条要求及时保持申报信息准确，宜回复原审批邮件补充人数、源码公开计划及仍不收费、不重托管的用途。[CF 条款](https://support.curseforge.com/support/solutions/articles/9000207405-curseforge-3rd-party-api-terms-and-conditions)
+已重新读取 2026-10-29 的原审批邮件：正文批准 PigLauncher 使用第三方 API 并发放 Key，没有单用户硬性上限、公开源码禁令或桌面构建交付说明。因此，不应推断增加几位朋友就自动失效或必须重新申请。通用条款第 4 条要求及时保持申报信息准确；已回复原审批邮件补充人数、源码公开计划及仍不收费、不重托管的用途。[CF 条款](https://support.curseforge.com/support/solutions/articles/9000207405-curseforge-3rd-party-api-terms-and-conditions)
 
 同一应用供多位最终用户使用，与直接披露 Key 是不同问题。通用条款第 2 条限制 Key 披露；邮件未解释获批桌面应用如何交付凭证，需向 CF 确认。不能直接推出“每位朋友都必须申请”或“必须建后端”。公开源码与保密配置可以分离；编译进 EXE 仍可提取，不能当作保密保证。
 
@@ -77,6 +77,8 @@
 2026-06-10 官方公告称 CDN 文件下载从 7 月 16 日起要求 Key，推荐 `x-api-key` 请求头。当前代码及既有检查已覆盖官方 API/CDN 的限定主机注入；本次未重跑联网验证。此公告不等于允许向朋友披露 Key，也不能据历史样本认定所有文件都可下载。[CF 下载认证公告](https://blog.curseforge.com/introducing-api-key-authentication-for-curseforge-file-downloads/)
 
 用户确认的回信已于 2026-10-31 20:21:55（北京时间）在原审批邮件下发送，待 CF 答复。邮件说明公开仓库 / Releases、无任何宣传、预计初期 4–5 人使用，询问原批准及 Key、二进制内嵌（硬编码）Key 和官方 CDN 回退；实测仅采用三份原 CF 清单的五个案例。见 [发送记录](CF-API-APPLICATION.md)。
+
+2026-11-01 按用户要求，Actions 已通过仓库 Secret 将项目 Key 内嵌到程序，并替换私有仓库的草稿附件；源码不含 Key。该实现状态与 CF 尚待补充确认的状态分别记录，见 [最新构建验证](VALIDATION.md)。
 
 ## 替换代码的成本
 

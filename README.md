@@ -2,7 +2,9 @@
 
 更新：2026-11-01；记录截至当日的代码、构建与已有实测。
 
-首个预览版本为 `0.1.0-preview.1`，仓库与 Release 草稿保持私有，CF 回信后再决定公开。版本说明见 [发布记录](releases/0.1.0-preview.1.md)。推送 `v*` 标签或手动运行 `Build release` 工作流，会从对应标签编译 Windows x64 自带 .NET 运行时的 ZIP 与 SHA-256，校验后替换草稿附件。构建通过仓库 Secrets `CURSEFORGE_API_KEY`、`MS_CLIENT_ID` 内嵌服务配置；包内 `build-info.json` 记录源码提交和工作流地址。
+首个预览版本 `0.1.0-preview.1` 已由 [GitHub Actions 构建成功](https://github.com/xcy1221/PigLauncher/actions/runs/41218535388)，并替换 [Release 草稿附件](https://github.com/xcy1221/PigLauncher/releases/tag/untagged-7172855f6f511d0c6aa5)。仓库保持私有，CF 回信后再决定公开。版本说明见 [发布记录](releases/0.1.0-preview.1.md)。
+
+推送 `v*` 标签或手动运行 `Build release` 工作流，会从对应标签编译 Windows x64 自带 .NET 运行时的 ZIP 与 SHA-256，校验后替换草稿附件。构建通过仓库 Secrets `CURSEFORGE_API_KEY`、`MS_CLIENT_ID` 内嵌服务配置；包内 `build-info.json` 记录源码提交和工作流地址。
 
 本地运行 `scripts/New-ReleasePackage.ps1` 默认仍不嵌入 CF Key，输出位于忽略提交的 `.local/releases/`；显式凭证构建使用 `-EmbedServiceCredentials` 及对应 `PCL_` 环境变量。源码和工作流仅保存 Secret 名称，账号数据不参与打包。
 
@@ -49,7 +51,7 @@ Java 25 已安装在 `.local/java/25/`，隔离脚本会自动将其提供给启
 - 基线：PCL CE v2.15.1，提交 `1a7653127d578efdb2a9388999a3fdc67d9e49d5`，保存在 `upstream/PCL-CE/`。
 - 源码改动只维护 `dev/PCL-CE/`；内部程序集名暂沿用 `Plain Craft Launcher 2`，保证资源路径兼容。
 - 当前优先解决外围服务接入；代码编写与维护由 Codex 协助，不作为主要选型障碍。
-- 地区策略由个人版本修改。当前仅自用，发布、脱敏与许可相关处理留到决定发布时评估。
+- 地区策略由个人版本修改。以本人持续可用为核心，朋友试用为附加需求；用户接受现有授权不确定性，PCL 许可处理暂缓，详见 [许可记录](LICENSE-REVIEW.md)。
 - 保留成熟下载器和启动流程；个人版本需处理 CE 自动更新，防止上游包覆盖修改。
 - 登录认证与下载、本地管理独立验证；Minecraft 审核不阻塞后两者，完整正版启动另行验收，见[分项计划](VALIDATION.md)。
 - 下载默认“仅使用官方源（无镜像回退）”。2026-10-31 按用户要求恢复文件、版本列表和社区资源的源选择，可分别选择优先镜像或官方缓慢时使用镜像；沿用内置 BMCLAPI、MCIM 路径。镜像失效时允许回退官方，外部镜像当前可用性与完整安装仍待实测。
@@ -59,7 +61,7 @@ Java 25 已安装在 `.local/java/25/`，隔离脚本会自动将其提供给启
 
 2026-10-26 用户提供 AppID 审核通过邮件后，使用原 Client ID 重测：设备码、微软令牌、Xbox Live、XSTS、Minecraft 令牌、Java 所有权及角色接口全部返回 HTTP 200，历史 `403 Invalid app registration` 已消失。记录见[登录验证说明](MICROSOFT-LOGIN-TEST.md)。
 
-原 Client ID 已接入 Release 启动器：从程序目录的 `service-config.json` 读取 `MS_CLIENT_ID`，没有该字段时保留原构建参数回退；配置错误会给出提示。修改 Client ID 不需要重新编译。
+原 Client ID 已接入启动器及 Actions 构建：优先从程序目录的 `service-config.json` 读取 `MS_CLIENT_ID`，没有该字段时使用编译内置值；配置错误会给出提示。本地覆盖 Client ID 不需要重新编译。
 
 现有认证代码可复用：设备码登录 → 微软令牌 → Xbox Live → XSTS → Minecraft 令牌 → 所有权与角色信息。Client ID 是应用标识；本项目的设备码流程不需要 Client Secret，账号登录在微软页面完成。
 
@@ -88,11 +90,11 @@ AppID 已获准加入允许名单，见[申请记录](MINECRAFT-API-APPLICATION.
 - 2026-10-31 20:21（北京时间）已向 CF 回复补充范围：计划公开仓库及 Releases，不做任何形式的宣传，询问原批准 / Key、二进制内嵌 Key 及官方 CDN 回退；当前待答复，见 [发送记录](CF-API-APPLICATION.md)。
 - Modrinth 官方搜索、版本列表和 CDN 下载均实测通过，样本大小和 SHA-512 匹配，无需 Token。
 - CurseForge 于 2026-10-29 批准 PigLauncher。2026-10-31 已接入本地 Key，官方搜索、项目详情、版本列表与一个 CDN 样本下载校验通过。
-- Key 读取程序目录 `service-config.json` 的 `CURSEFORGE_API_KEY`；原始配置位于忽略提交的 `.local/service-config.json`，交付及隔离测试副本同步该字段。审核记录见[申请案例](CF-API-APPLICATION.md)。
+- Actions 预览包已从仓库 Secret 内嵌项目 Key；程序优先读取同目录 `service-config.json` 的 `CURSEFORGE_API_KEY`，未配置该字段时使用内置值。本地原始配置仍位于忽略提交的 `.local/service-config.json`，开发交付及隔离测试副本同步该字段。审核记录见[申请案例](CF-API-APPLICATION.md)。
 - 下载源选择已恢复，默认官方；CF 与 Modrinth 的镜像路径由社区资源设置单独控制，仍需逐项验证搜索、依赖与完整安装。
 - Key 可用也不保证所有文件能自动获取。作者关闭第三方分发或缺少下载地址时，应提供手动补齐流程；CE 当前拼接 CDN 地址的兜底尚未实测。
 - 保留 Modrinth 现有接入；它不能替代 CurseForge 独占内容。资源接入无需额外安装下载工具或官方客户端。
-- Client ID、API Key 均已使用本地配置，更换值无需重新编译；API Key 和账号令牌不写入文档或提交。
+- Client ID、API Key 均支持本地配置覆盖，更换覆盖值无需重新编译；更新内置值需修改仓库 Secret 并重跑构建。API Key 和账号令牌不写入文档或提交。
 
 ## 本地工具
 
@@ -115,7 +117,7 @@ PowerShell 封装命令中的 `-p:` 参数需要按示例加引号。
 ## 当前状态
 
 - 已完成源码静态审查，见 [审查记录](PCL-CE-review.md)。
-- 最近交付为 2026-10-31 Release/x64：构建 0 错误；设置与旧启动显示移除、语言区域读写 2 项检查通过，证据为 `.local/functional-tests/20261031-launch-display/evidence/`。下载源、CF、WebP 的历史检查见验证记录。
+- 最近发布附件为 2026-11-01 Actions 预览版：源码提交 `d622c655ff44bf1987230975e14398b87a09f72a`，构建、凭证内嵌和附件校验通过，保持草稿。此前设置、下载源、CF、WebP 等功能检查见 [验证记录](VALIDATION.md)，不据云端构建认定完整功能验收通过。
 - 窗口尺寸与工具入口 8 项检查通过；原版猪 9 项、主页异常及文字设置 7 项检查通过。构建和离屏检查不替代实际窗口验收。
 - Minecraft 与 CF 服务准入均已获批，阶段 2 的完整接入和阶段 4 的实际使用验收继续补齐；见 [开发路线](ROADMAP.md)。
 - Forge、NeoForge、Fabric、LabyMod、OptiFine 列表经启动器引擎实取通过；用户报告下载、启动、创建世界成功，日志可确认 `26.3-NeoForge_26.3.0.95` 启动。其余加载器完整安装、批量依赖、整合包导入、取消及恢复仍待验收。

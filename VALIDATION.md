@@ -6,7 +6,7 @@
 
 | 项目 | 截至最近交付的结果 | 仍需确认 |
 |---|---|---|
-| 构建与交付 | 2026-10-31 Release/x64，0 错误；EXE、主程序集、Core 哈希一致 | 不代表全部功能通过 |
+| 构建与交付 | 2026-11-01 Actions/x64 预览包构建成功；凭证内嵌与远端附件 SHA-256 核对通过 | 完整界面与使用流程仍待验收 |
 | 原版猪与设置 | 原版纹理、模型、UV 及离屏渲染 9 项检查通过；转速 0–120°/秒，目标 60 FPS | 实机流畅度、深色模式 |
 | 主页异常与文字 | 旧异常复现；修复后 7 项检查通过，含 10 万次并发订阅/读取；已调整排版和像素对齐 | 页面切换复测、真实显示器清晰度 |
 | 窗口与工具页 | 8 项检查通过，覆盖 75% 上限、DPI、已保存尺寸与入口移除；迁移代码已核对 | 实机多屏位置与缩放 |
@@ -14,7 +14,7 @@
 | Modrinth / CurseForge | Modrinth 样本校验及整合包列表已有证据；CF 本地 Key、搜索、详情、版本列表与一个下载样本通过 | 缩略图解码错误；界面操作、依赖、整合包及受限分发 |
 | 微软 / Minecraft 登录 | AppID 获批，原 Client ID 独立首次登录、所有权和角色读取全部 HTTP 200；已接入启动器本地配置 | 界面完整登录、账号恢复、刷新及正版服务器 |
 
-最新交付证据：`.local/functional-tests/20261031-modpack-failures-final/evidence/`。此前设置、下载源、CF、WebP 证据位于同级对应运行目录。检查项数不代表完整用户流程验收。
+最新发布证据见下方 Actions 运行记录；最近功能检查证据为 `.local/functional-tests/20261031-modpack-failures-final/evidence/`。此前设置、下载源、CF、WebP 证据位于同级对应运行目录。检查项数不代表完整用户流程验收。
 
 ## 2026-11-01：GitHub Actions 凭证构建
 
@@ -22,8 +22,10 @@
 - `CURSEFORGE_API_KEY`、`MS_CLIENT_ID` 使用仓库 Secrets，通过原有 Source Generator 编译内嵌；仅允许指定凭证及源码提交进入编译环境，禁用共享编译服务以免沿用旧环境。运行时仍允许本地配置覆盖。
 - PowerShell 语法、标签不匹配和缺失 Secret 的提前失败检查通过；使用测试凭证的干净发布构建通过，已检查程序集包含要求的配置与提交。测试凭证包仅留本地，不用于 Release。
 - ZIP 中新增 `build-info.json`，记录版本、源码提交、工作流地址与凭证内嵌状态，不记录凭证值。正式云端结果见 Release 正文链接的 Actions 运行记录。
+- [首轮 Actions](https://github.com/xcy1221/PigLauncher/actions/runs/41218535388) 已成功，源码提交 `d622c655ff44bf1987230975e14398b87a09f72a`；真实项目凭证内嵌检查通过，ZIP 与校验文件已替换 [Release 草稿附件](https://github.com/xcy1221/PigLauncher/releases/tag/untagged-7172855f6f511d0c6aa5)。仓库仍私有，Release 未发布。
+- 本轮 ZIP 为 82,676,554 字节，SHA-256 为 `3346791fe47a418d67db21321a3d68c4d9bbb7751542e39ae4b6164b361e820f`，与 GitHub 服务端值一致。未执行新附件的完整界面、登录或 CF 下载实测。
 
-## 2026-10-31：首个 Release 草稿
+## 2026-10-31：首个本地构建草稿（附件已被 Actions 产物替换）
 
 - 版本统一为 `0.1.0-preview.1`，新增 `scripts/New-ReleasePackage.ps1`；Windows x64 单文件、自带 .NET 运行时，ZIP 约 79 MiB，附 SHA-256、上游声明、实际解析的 NuGet 与运行时包声明及随包许可。
 - 干净中间目录发布构建通过；修正隔离构建误包含原 `obj/` 的问题。保留既有编译警告。
