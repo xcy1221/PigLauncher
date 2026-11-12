@@ -11,6 +11,8 @@ PigLauncher 独立维护版本号，手动递增；当前版本为 `0.1.0-previe
 
 例：`0.1.0-preview.1` → `0.1.0-preview.2` → `0.1.0`；之后修复问题为 `0.1.1`，下一轮功能为 `0.2.0-preview.1`。数字不使用前导零。
 
+根目录 `VERSION` 是看板和仓库统一版本索引；修改下述元数据和主程序版本时同步该文件。维护状态另见 [STATUS.md](STATUS.md)，不因暂停推进而自动变更版本号。
+
 ## 设置与构建
 
 1. 修改 `dev/PCL-CE/Plain Craft Launcher 2/metadata.json`：`base` 为 `x.y.z`，`suffix` 为 `preview.N`；稳定版将 `suffix` 设为 `""`。

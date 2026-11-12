@@ -127,3 +127,8 @@ PowerShell 封装命令中的 `-p:` 参数需要按示例加引号。
 - 项目远端为 `git@github.com:xcy1221/PigLauncher.git`；源码、文档与工具脚本纳入首个预览版快照，仓库保持私有，Release 保持草稿。
 
 参考：[微软设备码流程](https://learn.microsoft.com/en-us/entra/identity-platform/v2-oauth2-device-code)、[Minecraft 应用注册错误的开发者报告](https://learn.microsoft.com/en-au/answers/questions/5984225/minecraft-services-http-403-invalid-app-registrati)、[CurseForge Key 申请](https://support.curseforge.com/support/solutions/articles/9000208346-about-the-curseforge-api-and-how-to-apply-for-a-key)、[Modrinth API](https://docs.modrinth.com/api/)。
+
+## 版本与维护状态
+
+- 当前项目版本统一索引见 [VERSION](VERSION)，与 `dev/PCL-CE/Plain Craft Launcher 2/metadata.json`、`VERSIONING.md` 保持一致；沿用现有构建和发布流程。
+- 是否仍在维护以 [STATUS.md](STATUS.md) 的 `maintenance_status` 为准；维护结论变化时同步该文件及本节。
