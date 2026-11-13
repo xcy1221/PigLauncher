@@ -20,4 +20,4 @@ PigLauncher 独立维护版本号，手动递增；当前版本为 `0.1.0-previe
 3. 新建对应的 `releases/<完整版本>.md`，提交源码并推送 `v<完整版本>` 标签。
 4. Actions 从标签构建，校验版本一致性并生成 ZIP、SHA-256 和 `build-info.json`。也可手动运行 `Build release` 并选择已有标签。
 
-预览版设置 GitHub `prerelease=true`，稳定版设置 `prerelease=false`；两者均创建或更新 **Release 草稿**，不会自动公开，也不会覆盖已发布的 Release。未来版本的标签应保持固定；当前 `v0.1.0-preview.1` 保留原有构建。
+预览版设置 GitHub `prerelease=true`，稳定版设置 `prerelease=false`；两者均创建或更新 **Release 草稿**，不会自动公开，也不会覆盖已发布的 Release。核验后按用户授权发布；已发布版本的标签保持固定，既有 `v0.1.0-preview.1` 保留原有构建。

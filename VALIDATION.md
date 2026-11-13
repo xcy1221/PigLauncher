@@ -2,6 +2,14 @@
 
 更新：2026-11-13。本文件按日期保留历史记录，后续记录覆盖早期结论；完整界面功能由用户统一验收，**当前不能视为下载与本地管理全部通过**。
 
+## 2026-11-13：preview.2 发布与仓库公开
+
+- 已发布 [0.1.0-preview.2](https://github.com/xcy1221/PigLauncher/releases/tag/v0.1.0-preview.2)，状态为非草稿预览版；仓库可见性回查为 `PUBLIC`。旧预览版草稿保留。
+- [Actions 构建](https://github.com/xcy1221/PigLauncher/actions/runs/43372169415)成功，源码提交 `851f48c4c1d91a8430fe4f14345c58eba4838c16`；包内版本、提交、Windows x64 自带运行时及服务配置内嵌标记核对通过。
+- ZIP 为 82,678,818 字节，SHA-256：`8df85e3903ab25efe1048674135d2f2018d8a46e1a68c1bffbab61f7b6481fdb`，与随包校验文件及 GitHub 附件摘要一致。118 个包内文件未发现账号数据、GitHub Token 或私钥，项目 CF Key 仅允许存在于程序二进制。
+- 发布前扫描 1,163 个当前文件及 1,179 个历史文件版本，未发现项目 CF Key、GitHub Token 或私钥；26 项版本检查、5 项工作流模拟通过，功能证据沿用下节的 18 项检查。未新增完整联网安装或窗口验收结论。
+- 执行决定见 [记录](LICENSE-REVIEW.md)；完整本地发布证据位于 `.local/release-prep-preview2/`。
+
 ## 2026-11-13：按 CF 答复处理受限文件
 
 - 用户提供 MarmAmic 私信确认：公开计划与二进制内嵌 Key 可以；受限文件不得通过拼接 CDN 地址下载，须引导 CF 官网。截图本地存档见 [申请记录](CF-API-APPLICATION.md)。
