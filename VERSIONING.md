@@ -18,6 +18,8 @@ PigLauncher 独立维护版本号，手动递增；当前版本为 `0.1.0-previe
 1. 修改 `dev/PCL-CE/Plain Craft Launcher 2/metadata.json`：`base` 为 `x.y.z`，`suffix` 为 `preview.N`；稳定版将 `suffix` 设为 `""`。
 2. 同步主程序 `csproj`：`Version` 为完整版本，`AssemblyVersion` 和 `FileVersion` 为 `x.y.z.0`。`upstream`、`code` 是上游及内部信息，不按此规则自动递增。
 3. 新建对应的 `releases/<完整版本>.md`，提交源码并推送 `v<完整版本>` 标签。
-4. Actions 从标签构建，校验版本一致性并生成 ZIP、SHA-256 和 `build-info.json`。也可手动运行 `Build release` 并选择已有标签。
+4. Actions 从标签构建，校验版本一致性，直接发布 `PigLauncher.exe` 和 `SHA256SUMS.txt`；不生成 ZIP、README、build-info 或 licenses 目录。也可手动运行 `Build release` 并选择已有标签，构建使用该标签中的脚本。
 
 预览版设置 GitHub `prerelease=true`，稳定版设置 `prerelease=false`；两者均创建或更新 **Release 草稿**，不会自动公开，也不会覆盖已发布的 Release。核验后手动发布；已发布版本的标签保持固定，既有 `v0.1.0-preview.1` 保留原有构建。
+
+仅调整下载形式且 EXE 内容不变时，可人工更新现有 Release 附件和校验文件，不移动标签或递增版本。程序或内嵌配置发生变化时发布新版本。

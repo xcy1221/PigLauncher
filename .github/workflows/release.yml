@@ -51,7 +51,7 @@ jobs:
         with:
           name: PigLauncher-${{ env.RELEASE_TAG }}-win-x64
           path: |
-            ${{ steps.package.outputs.zip_path }}
+            ${{ steps.package.outputs.exe_path }}
             ${{ steps.package.outputs.checksum_path }}
           if-no-files-found: error
           retention-days: 3
@@ -60,7 +60,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-          PACKAGE_ZIP: ${{ steps.package.outputs.zip_path }}
+          PACKAGE_EXE: ${{ steps.package.outputs.exe_path }}
           PACKAGE_CHECKSUM: ${{ steps.package.outputs.checksum_path }}
           PACKAGE_VERSION: ${{ steps.package.outputs.version }}
           PACKAGE_PRERELEASE: ${{ contains(steps.package.outputs.version, '-') }}
@@ -83,16 +83,21 @@ jobs:
             gh release create $env:RELEASE_TAG --draft "--prerelease=$env:PACKAGE_PRERELEASE" --verify-tag --title "猪咪启动器 $env:PACKAGE_VERSION" --notes-file $bodyFile
           }
           if ($LASTEXITCODE -ne 0) { throw 'Failed to prepare draft release.' }
-          gh release upload $env:RELEASE_TAG $env:PACKAGE_ZIP $env:PACKAGE_CHECKSUM --clobber
+          gh release upload $env:RELEASE_TAG $env:PACKAGE_EXE $env:PACKAGE_CHECKSUM --clobber
           if ($LASTEXITCODE -ne 0) { throw 'Failed to upload release attachments.' }
           $release = gh release view $env:RELEASE_TAG --json isDraft,isPrerelease,assets | ConvertFrom-Json
           $expectedPrerelease = $env:PACKAGE_PRERELEASE -eq 'true'
           if ($LASTEXITCODE -ne 0 -or !$release.isDraft -or $release.isPrerelease -ne $expectedPrerelease) { throw 'Draft release verification failed.' }
-          foreach ($file in @($env:PACKAGE_ZIP, $env:PACKAGE_CHECKSUM)) {
+          $expectedNames = @($env:PACKAGE_EXE, $env:PACKAGE_CHECKSUM) | ForEach-Object { [IO.Path]::GetFileName($_) }
+          foreach ($file in @($env:PACKAGE_EXE, $env:PACKAGE_CHECKSUM)) {
             $asset = @($release.assets | Where-Object name -eq ([IO.Path]::GetFileName($file)))
             $expected = 'sha256:' + (Get-FileHash -LiteralPath $file -Algorithm SHA256).Hash.ToLowerInvariant()
             if ($asset.Count -ne 1 -or $asset[0].state -ne 'uploaded' -or $asset[0].digest -ne $expected) {
               throw 'Uploaded attachment checksum verification failed.'
             }
+          }
+          foreach ($asset in $release.assets | Where-Object { $_.name -notin $expectedNames }) {
+            gh release delete-asset $env:RELEASE_TAG $asset.name --yes
+            if ($LASTEXITCODE -ne 0) { throw 'Failed to remove obsolete draft attachment.' }
           }
           Write-Output 'Draft release attachments verified.'

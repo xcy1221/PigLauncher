@@ -4,7 +4,9 @@
 
 ## 当前版本
 
-`0.1.0-preview.2` 的 [Actions 构建](https://github.com/xcy1221/PigLauncher/actions/runs/43372169415)成功，Windows x64 ZIP、校验文件及包内版本信息已核对。
+`0.1.0-preview.2` 的 [Actions 构建](https://github.com/xcy1221/PigLauncher/actions/runs/43372169415)成功。下载形式已调整为 Windows x64 EXE 和校验文件；EXE 与原 ZIP 内程序一致，版本号和源码标签不变。
+
+单文件发布脚本本地构建通过，输出目录仅含 EXE 和校验文件；草稿流程模拟覆盖旧附件清理，已发布版本保护保留。
 
 | 检查 | 已验证范围 |
 |---|---|

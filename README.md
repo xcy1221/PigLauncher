@@ -14,7 +14,7 @@
 
 ## 下载与运行
 
-1. 下载 Windows x64 ZIP，并完整解压。
+1. 下载 Release 中的 Windows x64 `PigLauncher.exe`。
 2. 运行 `PigLauncher.exe`。
 3. 准备 Java，或通过启动器下载所需版本。
 
