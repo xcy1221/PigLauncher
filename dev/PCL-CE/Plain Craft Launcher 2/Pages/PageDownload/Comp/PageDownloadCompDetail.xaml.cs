@@ -67,6 +67,7 @@ public partial class PageDownloadCompDetail
         {
             // 获取基本信息
             var file = (ModComp.CompFile)sender.Tag;
+            if (file.RedirectManualDownload()) return;
             var loaderName =
                 $"{(_project.FromCurseForge ? "CurseForge" : "Modrinth")} {Lang.Text("Download.Comp.Detail.ModpackDownload")}：{_project.TranslatedName} ";
 
@@ -145,6 +146,7 @@ public partial class PageDownloadCompDetail
         {
             // 获取基本信息
             var file = (ModComp.CompFile)sender.Tag;
+            if (file.RedirectManualDownload()) return;
             var loaderName = $"{(_project.FromCurseForge ? "CurseForge" : "Modrinth")} {Lang.Text("Download.Comp.Detail.WorldDownload")}：{_project.TranslatedName} ";
 
             // 确认默认保存位置
@@ -268,6 +270,7 @@ public partial class PageDownloadCompDetail
             _ => null
         };
 
+        if (file is null || file.RedirectManualDownload()) return;
         ModBase.RunInNewThread(() =>
         {
             try

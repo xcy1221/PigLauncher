@@ -623,6 +623,10 @@ public partial class PageDownloadCompFavorites
                     // 按照发布日期排序
                     var finalChoices = Target.Where(i => i.GameVersions.Contains(selectedVersionStr)).ToList();
                     finalChoices.Sort((a, b) => a.ReleaseDate > b.ReleaseDate);
+                    var selectedFile = finalChoices.First();
+                    if (selectedFile.RedirectManualDownload())
+                        throw new InvalidOperationException("收藏批量下载未完成：此文件需从 CurseForge 官网手动下载。\n"
+                            + selectedFile.FileName + "\n" + selectedFile.ManualDownloadUrl);
                     // 获取文件名
                     var targetProject = ModComp.compProjectCache[finalChoices.First().ProjectId];
                     var fileName = ModComp.CompFileNameGet(targetProject, finalChoices.First());

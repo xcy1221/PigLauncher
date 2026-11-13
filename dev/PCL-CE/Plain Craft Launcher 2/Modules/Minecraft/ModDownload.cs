@@ -2044,6 +2044,10 @@ public static class ModDownload
 
     private static List<KeyValuePair<string, int>> DlModRequestSources(string url, bool allowMirror)
     {
+        // CF 的分发状态与下载地址以官方 API 为准，避免镜像返回旧地址绕过作者限制。
+        if (Uri.TryCreate(url, UriKind.Absolute, out var uri) && uri.Host == "api.curseforge.com"
+            && uri.AbsolutePath != "/v1/mods/search")
+            allowMirror = false;
         var mirror = DlSourceModGet(url);
         if (!allowMirror || mirror == url) return [new(url, 30)];
         return Config.Download.Comp.CompSourceSolution switch

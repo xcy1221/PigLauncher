@@ -938,6 +938,8 @@ public static class ModComp
         /// </summary>
         public readonly string Website;
 
+        public readonly bool? AllowModDistribution;
+
         private CompDatabaseEntry _DatabaseEntry;
 
         // 数据库信息
@@ -985,6 +987,7 @@ public static class ModComp
             RawName = result.RawName;
             Description = result.Description;
             Website = result.Website;
+            AllowModDistribution = result.AllowModDistribution;
             LastUpdate = result.LastUpdate;
             DownloadCount = result.DownloadCount;
             ModLoaders = result.ModLoaders;
@@ -1006,6 +1009,7 @@ public static class ModComp
             public string RawName;
             public string Description;
             public string Website;
+            public bool? AllowModDistribution;
             public DateTime? LastUpdate;
             public int DownloadCount;
             public List<CompLoaderType> ModLoaders = [];
@@ -1025,6 +1029,7 @@ public static class ModComp
                 RawName = (string)data["RawName"],
                 Description = (string)data["Description"],
                 Website = (string)data["Website"],
+                AllowModDistribution = data["AllowModDistribution"]?.ToObject<bool>(),
                 DownloadCount = (int)data["DownloadCount"],
                 Tags = ((JsonArray)data["Tags"]).Select(t => t.ToString()).ToList()
             };
@@ -1060,6 +1065,7 @@ public static class ModComp
                 RawName = (string)data["name"],
                 Description = (string)data["summary"],
                 Website = (data["links"]?["websiteUrl"]?.ToString() ?? "").TrimEnd('/'),
+                AllowModDistribution = data["allowModDistribution"]?.ToObject<bool>(),
                 LastUpdate = data["dateReleased"]?.ToObject<DateTime>(), // #1194
                 DownloadCount = (int)data["downloadCount"]
             };
@@ -1080,8 +1086,8 @@ public static class ModComp
 
             foreach (var file in (data["latestFiles"] as JsonArray) ?? [])
             {
-                var newFile = new CompFile((JsonObject)file, result.Type);
-                if (!newFile.Available)
+                var newFile = new CompFile((JsonObject)file, result.Type, result.AllowModDistribution);
+                if (!newFile.Available && !newFile.RequiresManualDownload)
                     continue;
 
                 result.ModLoaders.AddRange(newFile.ModLoaders);
@@ -1467,6 +1473,8 @@ public static class ModComp
             json["RawName"] = RawName;
             json["Description"] = Description;
             json["Website"] = Website;
+            if (AllowModDistribution is not null)
+                json["AllowModDistribution"] = AllowModDistribution.Value;
             if (LastUpdate is not null)
                 json["LastUpdate"] = LastUpdate;
             json["DownloadCount"] = DownloadCount;
@@ -2782,6 +2790,22 @@ public static class ModComp
         /// </summary>
         public List<string> DownloadUrls;
 
+        public readonly bool RequiresManualDownload;
+
+        public string ManualDownloadUrl
+        {
+            get
+            {
+                if (!FromCurseForge) return "";
+                if (compProjectCache.TryGetValue(ProjectId ?? "", out var project)
+                    && Uri.TryCreate(project.Website, UriKind.Absolute, out var uri)
+                    && uri.Scheme == "https" && uri.Host == "www.curseforge.com")
+                    return project.Website.TrimEnd('/') + "/files/" + Id;
+                return string.IsNullOrEmpty(ProjectId) ? "https://www.curseforge.com/minecraft"
+                    : $"https://www.curseforge.com/projects/{ProjectId}/files/{Id}";
+            }
+        }
+
         /// <summary>
         ///     Mod 版本号。
         ///     不一定是标准格式。CurseForge 上默认为 Nothing。
@@ -2793,7 +2817,7 @@ public static class ModComp
         /// <summary>
         ///     从文件 Json 中初始化实例。若出错会抛出异常。
         /// </summary>
-        public CompFile(JsonObject data, CompType defaultType)
+        public CompFile(JsonObject data, CompType defaultType, bool? allowModDistribution = null)
         {
             Type = defaultType;
             if (data.ContainsKey("FromCurseForge"))
@@ -2802,6 +2826,7 @@ public static class ModComp
 
                 FromCurseForge = data["FromCurseForge"].ToObject<bool>();
                 Id = data["Id"].ToString();
+                ProjectId = data["ProjectId"]?.ToString();
                 DisplayName = data["DisplayName"].ToString();
                 if (data.ContainsKey("Version"))
                     Version = data["Version"].ToString();
@@ -2812,6 +2837,15 @@ public static class ModComp
                     FileName = data["FileName"].ToString();
                 if (data.ContainsKey("DownloadUrls"))
                     DownloadUrls = data["DownloadUrls"].ToObject<List<string>>();
+                if (allowModDistribution is null && FromCurseForge
+                    && compProjectCache.TryGetValue(ProjectId ?? "", out var cachedProject))
+                    allowModDistribution = cachedProject.AllowModDistribution;
+                // 旧缓存可能含自行拼接的地址，不能继续作为下载授权依据。
+                RequiresManualDownload = FromCurseForge &&
+                    (data["CurseForgeDownloadPolicy"]?.ToString() != "1"
+                     || data["RequiresManualDownload"]?.ToObject<bool>() == true
+                     || allowModDistribution == false);
+                if (RequiresManualDownload) DownloadUrls = [];
                 if (data.ContainsKey("ModLoaders"))
                     ModLoaders = data["ModLoaders"].ToObject<List<CompLoaderType>>();
                 if (data.ContainsKey("Hash"))
@@ -2856,13 +2890,12 @@ public static class ModComp
                             .FirstOrDefault(s => s["algo"].ToObject<int>() == 2)?["value"];
                     // DownloadAddress
                     var url = data["downloadUrl"]?.ToString() ?? "";
-                    // API 未提供地址时保留官方 CDN 回退；实际下载仍接受服务端认证及文件校验。
-                    if (string.IsNullOrWhiteSpace(url))
-                        url =
-                            $"https://edge.forgecdn.net/files/{int.Parse(Id[..4])}/{int.Parse(Id[4..])}/{FileName}";
-                    url = url.Replace(FileName, WebUtility.UrlEncode(FileName)); // 对文件名进行编码
-                    url = url.Replace("+", "%20"); // 修正被编码成 + 的空格，CurseForge 会对 + 号也进行编码
-                    DownloadUrls = ModDownload.DlSourceModDownloadGet(HandleCurseForgeDownloadUrls(url)); // 添加镜像源
+                    if (allowModDistribution is null && compProjectCache.TryGetValue(ProjectId, out var project))
+                        allowModDistribution = project.AllowModDistribution;
+                    RequiresManualDownload = string.IsNullOrWhiteSpace(url) || allowModDistribution == false
+                        || data["allowModDistribution"]?.ToObject<bool>() == false;
+                    DownloadUrls = RequiresManualDownload ? [] :
+                        ModDownload.DlSourceModDownloadGet(HandleCurseForgeDownloadUrls(url));
                     // Dependencies
                     if (data.ContainsKey("dependencies"))
                     {
@@ -3077,7 +3110,16 @@ public static class ModComp
         /// <summary>
         ///     下载信息是否可用。
         /// </summary>
-        public bool Available => FileName is not null && DownloadUrls is { Count: > 0 };
+        public bool Available => !RequiresManualDownload && FileName is not null && DownloadUrls is { Count: > 0 };
+
+        public bool RedirectManualDownload()
+        {
+            if (!RequiresManualDownload) return false;
+            if (ModMain.MyMsgBox($"{FileName}\n此文件无法通过 CurseForge API 下载，请前往官网手动下载。",
+                    "需要手动下载", "打开 CurseForge", "取消") == 1)
+                ModBase.OpenWebsite(ManualDownloadUrl);
+            return true;
+        }
 
         /// <summary>
         /// 获取下载信息。
@@ -3104,7 +3146,9 @@ public static class ModComp
             string? version,
             CompLoaderType modLoader = CompLoaderType.Any)
         {
-            if (DownloadUrls is null)
+            if (RequiresManualDownload)
+                throw new InvalidOperationException($"{FileName} 需要从 CurseForge 官网手动下载：{ManualDownloadUrl}");
+            if (DownloadUrls is null || DownloadUrls.Count == 0)
             {
                 throw new InvalidCastException("DownloadUrls 为空");
             }
@@ -3174,6 +3218,12 @@ public static class ModComp
             var json = new JsonObject();
             json.Add("FromCurseForge", FromCurseForge);
             json.Add("Id", Id);
+            if (ProjectId is not null) json.Add("ProjectId", ProjectId);
+            if (FromCurseForge)
+            {
+                json.Add("CurseForgeDownloadPolicy", 1);
+                json.Add("RequiresManualDownload", RequiresManualDownload);
+            }
             if (Version is not null)
                 json.Add("Version", Version);
             json.Add("DisplayName", DisplayName);
@@ -3208,6 +3258,7 @@ public static class ModComp
                     // 1. 获取基础描述信息
                     var title = badDisplayName ? FileName : DisplayName;
                     var info = new List<string>();
+                    if (RequiresManualDownload) info.Add("需前往 CurseForge 官网手动下载");
 
                     // 2. 填充信息列表
                     if (title != FileName.BeforeLast("."))
@@ -3247,7 +3298,10 @@ public static class ModComp
                             _ => ModBase.pathImage + "Icons/A.png"
                         }
                     };
-                    newItem.Click += onClick;
+                    newItem.Click += (sender, args) =>
+                    {
+                        if (!RedirectManualDownload()) onClick(sender, args);
+                    };
 
                     // 4. 建立另存为按钮
                     if (onSaveClick is not null)
@@ -3256,7 +3310,10 @@ public static class ModComp
                         ToolTipService.SetPlacement(btnSave, PlacementMode.Center);
                         ToolTipService.SetVerticalOffset(btnSave, 30);
                         ToolTipService.SetHorizontalOffset(btnSave, 2);
-                        btnSave.Click += onSaveClick;
+                        btnSave.Click += (sender, args) =>
+                        {
+                            if (!RedirectManualDownload()) onSaveClick(sender, args);
+                        };
                         newItem.Buttons = new[] { btnSave };
                     }
 
@@ -3286,7 +3343,8 @@ public static class ModComp
     {
         // 1. 获取工程对象（使用 TryGetValue 提高效率并防止并发异常）
         CompProject targetProject = null;
-        if (!compProjectCache.TryGetValue(projectId, out targetProject))
+        if (!compProjectCache.TryGetValue(projectId, out targetProject)
+            || (fromCurseForge && !compFilesCache.ContainsKey(projectId)))
         {
             var url = fromCurseForge
                 ? $"https://api.curseforge.com/v1/mods/{projectId}"
@@ -3323,8 +3381,9 @@ public static class ModComp
                     ModDownload.DlModRequest<JsonArray>($"https://api.modrinth.com/v2/project/{projectId}/version?include_changelog=false");
             }
 
-            compFilesCache[projectId] = resultJsonArray.Select(a => new CompFile((JsonObject)a, targetProject.Type))
-                .Where(a => a.Available).GroupBy(a => a.Id).Select(g => g.First())
+            compFilesCache[projectId] = resultJsonArray.Select(a => new CompFile((JsonObject)a, targetProject.Type,
+                    targetProject.AllowModDistribution))
+                .Where(a => a.Available || a.RequiresManualDownload).GroupBy(a => a.Id).Select(g => g.First())
                 .ToList(); // 使用 GroupBy 实现更高效的 Distinct
         }
 
@@ -3454,11 +3513,12 @@ public static class ModComp
             try
             {
                 HintService.Hint(Lang.Text("Download.Comp.QuickDownload.Hint.Loading"), HintType.Info);
-                var files = FilterFilesByType(
-                    CompFilesGet(project.Id, project.FromCurseForge).Where(f => f.Available).ToList(),
-                    project.Type);
+                var allFiles = FilterFilesByType(CompFilesGet(project.Id, project.FromCurseForge), project.Type);
+                var files = allFiles.Where(f => f.Available).ToList();
                 if (files.Count == 0)
                 {
+                    var manualFile = _PickLatestFile(allFiles.Where(f => f.RequiresManualDownload).ToList());
+                    if (manualFile is not null && manualFile.RedirectManualDownload()) return;
                     HintService.Hint(Lang.Text("Download.Comp.QuickDownload.Hint.NoFile"), HintType.Info);
                     return;
                 }

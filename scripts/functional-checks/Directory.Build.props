@@ -1,5 +1,6 @@
 <Project>
   <PropertyGroup Condition="'$(PIGLAUNCHER_TEST_ROOT)' != ''">
     <BaseIntermediateOutputPath>$(PIGLAUNCHER_TEST_ROOT)\build\FunctionalChecks\obj\</BaseIntermediateOutputPath>
+    <DefaultItemExcludes>$(DefaultItemExcludes);obj\**;bin\**</DefaultItemExcludes>
   </PropertyGroup>
 </Project>

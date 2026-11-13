@@ -461,6 +461,7 @@ public static class ModModpack
         {
             var modDownloadLoaders = new List<LoaderBase>();
             var unavailableFiles = new List<string>();
+            var manualFiles = new List<(ModComp.CompFile File, string TargetFolder)>();
             // 获取 Mod 下载信息
             modDownloadLoaders.Add(new LoaderTask<int, JsonArray>(
                 Lang.Text("Minecraft.Download.Modpack.Stage.PrepareModsDownloadInfo"), task =>
@@ -490,6 +491,15 @@ public static class ModModpack
                             + string.Join("、", missingIds.Select(id => "CF 文件 " + id)));
                 } while (true);
 
+                // 读取当前作者分发设置与官网入口，不依赖镜像或磁盘旧缓存。
+                var projectIds = ret.Select(file => file["modId"]!.ToString()).Distinct().ToArray();
+                if (projectIds.Length > 0)
+                {
+                    var projects = ModDownload.DlModRequest<JsonObject>("https://api.curseforge.com/v1/mods",
+                        "POST", "{\"modIds\":[" + string.Join(",", projectIds) + "]}", "application/json");
+                    foreach (var project in projects["data"]!.AsArray().OfType<JsonObject>())
+                        _ = new ModComp.CompProject(project);
+                }
                 task.output = ret;
             })
             {
@@ -500,6 +510,8 @@ public static class ModModpack
                 Lang.Text("Minecraft.Download.Modpack.Stage.BuildModsDownloadInfo"), task =>
             {
                 var fileList = new Dictionary<int, DownloadFile>();
+                unavailableFiles.Clear();
+                manualFiles.Clear();
                 foreach (var ModJson in task.input)
                 {
                     var id = ModJson["id"].ToObject<int>();
@@ -554,7 +566,14 @@ public static class ModModpack
                     var file = new ModComp.CompFile((JsonObject)ModJson, type);
                     if (!file.Available)
                     {
-                        unavailableFiles.Add($"{file.DisplayName}（{file.FileName}，CF 文件 {id}）");
+                        var folder = $@"{ModFolder.mcFolderSelected}versions\{instanceName}\{targetFolder}\";
+                        var localPath = Path.Combine(folder, ModComp.CompFileNameSanitize(file.FileName));
+                        if (File.Exists(localPath) && !string.IsNullOrEmpty(file.Hash)
+                            && new ModBase.FileChecker(hash: file.Hash).Check(localPath) is null)
+                            continue;
+                        unavailableFiles.Add($"{file.DisplayName}（{file.FileName}，CF 文件 {id}）\n"
+                            + $"请在官网手动下载：{file.ManualDownloadUrl}\n放置位置：{folder}");
+                        manualFiles.Add((file, folder));
                         continue;
                     }
                     // 实际的添加
@@ -564,6 +583,8 @@ public static class ModModpack
                     task.Progress += 1d / (1 + modList.Count);
                 }
 
+                ModpackInstallStatus.SaveManualDownloads(
+                    $@"{ModFolder.mcFolderSelected}versions\{instanceName}\", manualFiles);
                 task.output = fileList.Values.ToList();
             })
             {
@@ -576,7 +597,8 @@ public static class ModModpack
             modDownloadLoaders.Add(new LoaderTask<string, int>("检查整合包资源完整性", _ =>
             {
                 if (unavailableFiles.Count > 0)
-                    throw new Exception("以下模组或资源无法下载，整合包安装未完成：\n"
+                    throw new Exception("以下模组或资源需要前往 CurseForge 官网手动下载，整合包安装未完成。\n"
+                        + "已在实例 PCL 文件夹生成 CurseForgeManualDownloads.html，包含官网链接与放置位置。\n"
                         + string.Join("\n", unavailableFiles));
             }) { show = false });
             // 构造加载器
