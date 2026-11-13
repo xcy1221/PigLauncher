@@ -11,7 +11,7 @@ PigLauncher 独立维护版本号，手动递增；当前版本为 `0.1.0-previe
 
 例：`0.1.0-preview.1` → `0.1.0-preview.2` → `0.1.0`；之后修复问题为 `0.1.1`，下一轮功能为 `0.2.0-preview.1`。数字不使用前导零。
 
-根目录 `VERSION` 是看板和仓库统一版本索引；修改下述元数据和主程序版本时同步该文件。维护状态另见 [STATUS.md](STATUS.md)，不因暂停推进而自动变更版本号。
+根目录 `VERSION` 是仓库版本索引；修改下述元数据和主程序版本时同步该文件。维护状态另见 [STATUS.md](STATUS.md)。
 
 ## 设置与构建
 
@@ -20,4 +20,4 @@ PigLauncher 独立维护版本号，手动递增；当前版本为 `0.1.0-previe
 3. 新建对应的 `releases/<完整版本>.md`，提交源码并推送 `v<完整版本>` 标签。
 4. Actions 从标签构建，校验版本一致性并生成 ZIP、SHA-256 和 `build-info.json`。也可手动运行 `Build release` 并选择已有标签。
 
-预览版设置 GitHub `prerelease=true`，稳定版设置 `prerelease=false`；两者均创建或更新 **Release 草稿**，不会自动公开，也不会覆盖已发布的 Release。核验后按用户授权发布；已发布版本的标签保持固定，既有 `v0.1.0-preview.1` 保留原有构建。
+预览版设置 GitHub `prerelease=true`，稳定版设置 `prerelease=false`；两者均创建或更新 **Release 草稿**，不会自动公开，也不会覆盖已发布的 Release。核验后手动发布；已发布版本的标签保持固定，既有 `v0.1.0-preview.1` 保留原有构建。

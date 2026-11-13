@@ -15,11 +15,14 @@ function Get-ProtectedState {
     $gameParent = [IO.Path]::GetFullPath((Join-Path $projectRoot '..'))
     $protectedPaths = @(
         (Join-Path $gameParent '.minecraft'), (Join-Path $gameParent 'PCL'),
-        (Join-Path $gameParent 'CreateAndAvaritia'),
         "$env:APPDATA\PCL", "$env:APPDATA\PCLCE", "$env:APPDATA\PCLCE_Debug",
         "$env:APPDATA\.PCLCE", "$env:APPDATA\.PCLCEDebug",
         "$env:APPDATA\PigLauncher", "$env:LOCALAPPDATA\PigLauncher"
     )
+    $localPathsFile = Join-Path $projectRoot '.local/protected-test-paths.json'
+    if (Test-Path -LiteralPath $localPathsFile) {
+        $protectedPaths += @(Get-Content -LiteralPath $localPathsFile -Raw | ConvertFrom-Json)
+    }
     $files = foreach ($path in $protectedPaths) {
         [pscustomobject]@{
             Path = $path; Exists = (Test-Path -LiteralPath $path)

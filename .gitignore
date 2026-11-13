@@ -3,5 +3,5 @@
 dev/PigLauncher/
 **/bin/
 **/obj/
-# Independent upstream review checkout; source import is planned for phase 3.
+# Separate upstream checkout.
 upstream/PCL-CE/
